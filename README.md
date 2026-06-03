@@ -62,42 +62,42 @@ MVC-Architektur
 - Die Anwendung soll Betriebtssytem-übergreifend ausführbar sein.
 
 ## Ordnerstruktur
-messdaten-manager/
-│
-├── model/
-│   ├── experiment.py # Experiment-Klasse
-│   ├── measurement_data.py # Messdaten-Klasse
-│   └── experiment_repository.py # Verwaltet Experimente, suchen, laden, speichern, etc.
-│
-├── view/
-│   ├── main_window.py
-│   ├── experiment_list_view.py
-│   ├── plot_view.py
-│   └── dialogs/
-│       ├── import_dialog.py
-│       └── export_dialog.py
-│
-├── controller/
-│   ├── experiment_controller.py
-│   ├── import_controller.py
-│   ├── export_controller.py
-│   └── plot_controller.py
-│
-├── services/
-│   ├── importers/
-│   │   ├── importer.py # Abstraktes Interface für csv, json,... importer
-│   │   ├── csv_importer.py
-│   │   └── json_importer.py
-│   │
-│   └── exporters/
-│       ├── exporter.py # Abstraktes Interface für csv, json,... exporter
-│       ├── csv_exporter.py
-│       └── json_exporter.py
-│       └── plot_exporter.py
-│
-├── data/
-│   └── experiments/ # Speicherort für Versuche
-│
-├── config.json # Alle settings
-├── main.py # Einstiegspunkt. Initialisiert GUI und Controller. Soll möglichst wenig Geschäftslogik enthalten.
-└── README.md
+- messdaten-manager/
+- │
+- ├── model/
+- │   ├── experiment.py # Experiment-Klasse
+- │   ├── measurement_data.py # Messdaten-Klasse
+- │   └── experiment_repository.py # Verwaltet Experimente, suchen, laden, speichern, etc.
+- │
+- ├── view/
+- │   ├── main_window.py
+- │   ├── experiment_list_view.py
+- │   ├── plot_view.py
+- │   └── dialogs/
+- │       ├── import_dialog.py
+- │       └── export_dialog.py
+- │
+- ├── controller/
+- │   ├── experiment_controller.py
+- │   ├── import_controller.py
+- │   ├── export_controller.py
+- │   └── plot_controller.py
+- │
+- ├── services/
+- │   ├── importers/
+- │   │   ├── importer.py # Abstraktes Interface für csv, json,... importer
+- │   │   ├── csv_importer.py
+- │   │   └── json_importer.py
+- │   │
+- │   └── exporters/
+- │       ├── exporter.py # Abstraktes Interface für csv, json,... exporter
+- │       ├── csv_exporter.py
+- │       └── json_exporter.py
+- │       └── plot_exporter.py
+- │
+- ├── data/
+- │   └── experiments/ # Speicherort für Versuche
+- │
+- ├── config.json # Alle settings
+- ├── main.py # Einstiegspunkt. Initialisiert GUI und Controller. Soll möglichst wenig Geschäftslogik enthalten.
+- └── README.md
