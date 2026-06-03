@@ -31,8 +31,9 @@ MVC-Architektur
 
 ## User stories:
 - Als Benutzer möchte ich Versuche direkt erfassen können.
+- Als Benutzer möchte ich neben den Messdaten auch Metadaten erfassen können.
 - Als Benutzer möchte ich Dateien importieren können.
-- Als Benutzer möchte ich Messdateien graphisch vergleichen
+- Als Benutzer möchte ich Messdateien graphisch vergleichen.
 - Als Benutzer möchte ich zwischen physikalischen Größen auswählen können.
 - Als Benutzer möchte ich Versuche in einer Liste sehen, um sie schnell auswählen zu können.
 - Als Benutzer möchte ich Dateien exportieren können.
@@ -41,6 +42,7 @@ MVC-Architektur
 ### Funktionale Anforderungen
 - Das System muss ein einheitliches Datenformat verarbeiten können.
 - Das System muss Messdaten aus CSV und JSON Dateien importieren können.
+- Das System muss es ermöglichen, Metadaten erfassen zu können.
 - Das System muss es ermöglichen, neue Experimente erfassen zu können.
 - Das System muss Messdaten als 2D-Graph visualisieren können.
 - Das System muss ermöglichen, die Achsen von dem Plot beschriften zu können.
@@ -58,3 +60,44 @@ MVC-Architektur
 - Die Anwendung soll gut mit schlecht skalierten Daten umgehen können.
 - Die Anwendung soll modular aufgebaut sein.
 - Die Anwendung soll Betriebtssytem-übergreifend ausführbar sein.
+
+## Ordnerstruktur
+messdaten-manager/
+│
+├── model/
+│   ├── experiment.py # Experiment-Klasse
+│   ├── measurement_data.py # Messdaten-Klasse
+│   └── experiment_repository.py # Verwaltet Experimente, suchen, laden, speichern, etc.
+│
+├── view/
+│   ├── main_window.py
+│   ├── experiment_list_view.py
+│   ├── plot_view.py
+│   └── dialogs/
+│       ├── import_dialog.py
+│       └── export_dialog.py
+│
+├── controller/
+│   ├── experiment_controller.py
+│   ├── import_controller.py
+│   ├── export_controller.py
+│   └── plot_controller.py
+│
+├── services/
+│   ├── importers/
+│   │   ├── importer.py # Abstraktes Interface für csv, json,... importer
+│   │   ├── csv_importer.py
+│   │   └── json_importer.py
+│   │
+│   └── exporters/
+│       ├── exporter.py # Abstraktes Interface für csv, json,... exporter
+│       ├── csv_exporter.py
+│       └── json_exporter.py
+│       └── plot_exporter.py
+│
+├── data/
+│   └── experiments/ # Speicherort für Versuche
+│
+├── config.json # Alle settings
+├── main.py # Einstiegspunkt. Initialisiert GUI und Controller. Soll möglichst wenig Geschäftslogik enthalten.
+└── README.md
