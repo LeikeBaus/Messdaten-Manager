@@ -1,0 +1,18 @@
+{
+  "info": {
+    "laboratory_title": "Messung Temperatur",
+    "author": "Marcel Bartneck",
+    "date": "01.06.2026",
+    "description": "Messung von Temperaturen",
+    "comment" : ""
+  },
+  "plot": {
+    "title": "Temperaturmessung vom 01.06.2026",
+    "y_title": "Temperatur",
+    "y_unit": "Celsius",
+    "y_scale": "",
+    "x-title": "Uhrzeit",
+    "x_unit": "",
+    "x_scale": ""
+  }
+}
