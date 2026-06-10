@@ -1,0 +1,15 @@
+# Python-Cache-Ordner (Kompilierte Bytecode-Dateien)
+__pycache__/
+*.pyc
+
+# Virtuelle Umgebungen (Lokale Python-Installationen)
+.venv/
+venv/
+ENV/
+
+# IDE-spezifische Konfigurationen (PyCharm)
+.idea/
+*.iml
+
+# Projekt-Konfigurations-Backups
+.pytest_cache/
