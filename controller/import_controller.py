@@ -1,13 +1,11 @@
 from pathlib import Path
 
-from services.importers.csv_importer import CSVImporter
-from services.importers.json_importer import JSONImporter
-
-
 class ImportController:
 
 	def __init__(self, importers):
-		self.importers = importers or [CSVImporter(), JSONImporter()]
+		if importers is None:
+			raise ValueError("importers must be provided.")
+		self.importers = importers
 
 	def import_file(self, file_path):
 		path = Path(file_path)
