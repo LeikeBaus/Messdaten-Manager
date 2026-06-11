@@ -5,7 +5,7 @@ class PlotController:
         self.view = view
 
     def export_plot(self, plot_widget, file_path):
-        """Exportiert man einen Png Ordner Datei"""
+        """Exportiert man einen Png Ordner Dateils"""
         try:
             exporter = ImageExporter(plot_widget.plotItem)
             exporter.export(file_path)
