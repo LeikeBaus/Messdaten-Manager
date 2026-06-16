@@ -38,22 +38,14 @@ class ExperimentPersistence:
         if path.name == "metadata.json":
             return self.load_experiment_from_metadata_file(path)
 
-        imported_data = self.import_file(file_path)
-        if imported_data is None:
-            return None
-
-        return self.build_experiment_from_import(imported_data, file_path)
+        return self.build_experiment_from_import(self.import_file(file_path), file_path)
 
     def load_experiment_from_metadata_file(self, metadata_file_path):
         path = Path(metadata_file_path)
 
-        try:
-            metadata_doc = self.import_file(str(path))
-        except (OSError, ValueError, TypeError):
-            return None
-
+        metadata_doc = self.import_file(str(path)) or {}
         if not isinstance(metadata_doc, dict):
-            return None
+            metadata_doc = {}
 
         experiment_info = metadata_doc.get("experiment", {})
         experiment_id = experiment_info.get("id") or path.parent.name
@@ -72,9 +64,9 @@ class ExperimentPersistence:
             if not measurement_file.exists():
                 continue
 
-            measurement_payload = self.import_file(str(measurement_file))
+            measurement_payload = self.import_file(str(measurement_file)) or {}
             if not isinstance(measurement_payload, dict):
-                continue
+                measurement_payload = {}
 
             measurement_data = MeasurementData(
                 headers=measurement_payload.get("headers") or [],
@@ -99,19 +91,20 @@ class ExperimentPersistence:
 
         experiment_id = imported_data.get("id") or Path(file_path).stem
         metadata = imported_data.get("metadata") or {"title": experiment_id}
-        headers = imported_data.get("headers") or []
-        rows = imported_data.get("rows") or []
+        measurement = self._measurement_from_payload(experiment_id, imported_data)
+        return Experiment(id=experiment_id, metadata=metadata, measurements=[measurement])
 
-        measurement_data = MeasurementData(headers=headers, rows=rows)
-        measurement = MeasurementSeries(
+    def _measurement_from_payload(self, experiment_id, payload):
+        headers = payload.get("headers") or []
+        rows = payload.get("rows") or []
+        return MeasurementSeries(
             id=f"{experiment_id}_measurement_1",
             name="Messung 1",
-            data=measurement_data,
+            data=MeasurementData(headers=headers, rows=rows),
             x={"title": headers[0] if len(headers) > 0 else "X", "type": "float", "unit": ""},
             y={"title": headers[1] if len(headers) > 1 else "Y", "type": "float", "unit": ""},
             plot={"visible": True, "color": "#1f77b4", "line_width": 2},
         )
-        return Experiment(id=experiment_id, metadata=metadata, measurements=[measurement])
     
     def measurement_file_name(self, measurement):
         safe_id = measurement.id.replace(" ", "_")
