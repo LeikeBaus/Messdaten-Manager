@@ -1,18 +1,72 @@
 {
-  "info": {
-    "laboratory_title": "Messung Temperatur",
-    "author": "Marcel Bartneck",
-    "date": "01.06.2026",
-    "description": "Messung von Temperaturen",
-    "comment" : ""
-  },
-  "plot": {
-    "title": "Temperaturmessung vom 01.06.2026",
-    "y_title": "Temperatur",
-    "y_unit": "Celsius",
-    "y_scale": "",
-    "x-title": "Uhrzeit",
-    "x_unit": "",
-    "x_scale": ""
-  }
+	"experiment": {
+		"id": "experiment_1",
+		"title": "Labor vom 15.06.2026",
+		"author": "Marcel Bartneck",
+		"date": "2026-06-15",
+		"description": "Beispiel mit drei Messreihen in einem Experiment",
+		"comment": "Mehrfachplot vorbereitet"
+	},
+	"measurements": [
+		{
+			"id": "temp_1",
+			"name": "Temperaturmessung",
+			"file": "data_temperature.csv",
+			"x": {
+				"title": "Zeit",
+				"unit": "min",
+				"type": "float"
+			},
+			"y": {
+				"title": "Temperatur",
+				"unit": "Celsius",
+				"type": "float"
+			},
+			"plot": {
+				"color": "#d35400",
+				"visible": true,
+				"line_width": 2
+			}
+		},
+		{
+			"id": "volt_1",
+			"name": "Spannungsmessung",
+			"file": "data_voltage.csv",
+			"x": {
+				"title": "Zeit",
+				"unit": "min",
+				"type": "float"
+			},
+			"y": {
+				"title": "Spannung",
+				"unit": "V",
+				"type": "float"
+			},
+			"plot": {
+				"color": "#8e44ad",
+				"visible": true,
+				"line_width": 2
+			}
+		},
+		{
+			"id": "curr_1",
+			"name": "Stromstärke",
+			"file": "data_current.csv",
+			"x": {
+				"title": "Zeit",
+				"unit": "min",
+				"type": "float"
+			},
+			"y": {
+				"title": "Stromstärke",
+				"unit": "%",
+				"type": "float"
+			},
+			"plot": {
+				"color": "#16a085",
+				"visible": false,
+				"line_width": 2
+			}
+		}
+	]
 }
