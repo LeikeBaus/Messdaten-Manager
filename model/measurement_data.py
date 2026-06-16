@@ -1,21 +1,24 @@
-import numpy as np
+from dataclasses import dataclass, field
 
+@dataclass
 class MeasurementData:
+	headers: list[str] = field(default_factory=list)
+	rows: list[list] = field(default_factory=list)
 
-    def __init__(self, name: str, unit: str, values: list | np.ndarray ) :
-        # list: Daten kommen von außen (JSON, GUI-Einzeltabellen)
-        # np.ndarray: Daten innerhalb der Logik (aus interne Berechnungen)
-        self.name = name
-        self.unit = unit
+	def _parse_number(self, value):
 
-        # values in NumPy-Array konvertieren, wenn es eine Liste ist
-        self.values = np.asarray(values, dtype=float)
+		text = str(value).strip().replace('"', "")
+		text = text.replace(",", ".")
+		return float(text)
 
-    def __repr__(self) -> str:
-        return f"MeasurementData(Name: {self.name}, unit:{self.unit}, values: {len(self.values)})"
+	def numeric_xy_series(self, x_column=0, y_column=1):
+		x_values = []
+		y_values = []
 
-if __name__ == "__main__":
-    test_obj = MeasurementData("Temperatur", unit="°C", values=[21.5,22,23.1,22.1])
-    print(test_obj)
-    print(test_obj.values)
-    print("NumPy-Array Typ:", type(test_obj.values))
+		for row in self.rows:
+			x_value = self._parse_number(row[x_column])
+			y_value = self._parse_number(row[y_column])
+			x_values.append(x_value)
+			y_values.append(y_value)
+
+		return x_values, y_values

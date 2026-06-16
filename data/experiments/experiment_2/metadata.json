@@ -1,0 +1,73 @@
+{
+	"schema_version": "2.0",
+	"experiment": {
+		"id": "experiment_2",
+		"title": "Labor vom 15.06.2026",
+		"author": "Marcel Bartneck",
+		"date": "2026-06-15",
+		"description": "Beispiel mit drei Messreihen in einem Experiment",
+		"comment": "Mehrfachplot vorbereitet"
+	},
+	"measurements": [
+		{
+			"id": "temp_2",
+			"name": "Temperaturmessung",
+			"file": "data_temperature.csv",
+			"x": {
+				"title": "Zeit",
+				"unit": "min",
+				"type": "float"
+			},
+			"y": {
+				"title": "Temperatur",
+				"unit": "Celsius",
+				"type": "float"
+			},
+			"plot": {
+				"color": "#d35400",
+				"visible": true,
+				"line_width": 2
+			}
+		},
+		{
+			"id": "volt_2",
+			"name": "Spannungsmessung",
+			"file": "data_voltage.csv",
+			"x": {
+				"title": "Zeit",
+				"unit": "min",
+				"type": "float"
+			},
+			"y": {
+				"title": "Spannung",
+				"unit": "V",
+				"type": "float"
+			},
+			"plot": {
+				"color": "#8e44ad",
+				"visible": true,
+				"line_width": 2
+			}
+		},
+		{
+			"id": "hum_2",
+			"name": "Feuchtemessung",
+			"file": "data_humidity.csv",
+			"x": {
+				"title": "Zeit",
+				"unit": "min",
+				"type": "float"
+			},
+			"y": {
+				"title": "Luftfeuchte",
+				"unit": "%",
+				"type": "float"
+			},
+			"plot": {
+				"color": "#16a085",
+				"visible": false,
+				"line_width": 2
+			}
+		}
+	]
+}
