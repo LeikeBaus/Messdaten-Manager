@@ -207,6 +207,9 @@ class ExperimentController:
     	finally:
         	QApplication.restoreOverrideCursor()
 
+	def copy_plot_to_clipboard(self):
+    	self.main_window.plot_view.copy_to_clipboard()
+
 	def refresh_views(self):
 		# Rebuild the tree view from the repository snapshot.
 		experiments = self.repository.list_experiments()
