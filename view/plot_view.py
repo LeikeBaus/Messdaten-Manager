@@ -1,81 +1,48 @@
-import os
-from datetime import datetime
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QCheckBox, QFileDialog, QMessageBox, QApplication
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QGuiApplication, QPixmap
+from PyQt6.QtWidgets import QWidget, QVBoxLayout
 import pyqtgraph as pg
-import tempfile
-from controller.plot_controller import PlotController
+
 
 class PlotView(QWidget):
+    """Render one or more measurement series with pyqtgraph."""
+
     def __init__(self, parent=None):
+        # Initialize the embedded pyqtgraph widget and layout.
         super().__init__(parent)
-        self.controller = PlotController(self)
-        self.init_ui()
-        self.create_demo_plot()
-    # Erstelle Layouts
-    def init_ui(self):
-        layout = QVBoxLayout()
 
-        # Definere pg als PlotWidget
         self.plot_widget = pg.PlotWidget()
+
+        layout = QVBoxLayout()
         layout.addWidget(self.plot_widget)
-	
-	#Layout des Buttons (Horizontal)
-	button_layout = QHBoxLayout()
-        self.export_btn = QPushButton("Export Plot as PNG")
-	self.copy_btn = QPushButton("Copy to Clipboard")
-	self.transparent_cb = QCheckBox("Transparent background")
-	button_layout.addWidget(self.export_btn)
-	button_layout.addWidget(self.copy_btn)
-	button_layout.addWidget(self.transparent_cb)
-	layout.addLayout(button_layout)
+        self.setLayout(layout)
 
-	self.setLayout(layout)
+        self.pen = pg.mkPen(color=(0, 0, 255), width=3)
 
-	#Verbindet man die Signalen
-	self.export_btn.clicked.connect(self.on_export_clicked)
-	self.copy_btn.clicked.connect(self.on_copy_clicked)
+    def set_plots(self, series_list, title="", label_x="", unit_x="", label_y="", unit_y=""):
+        # Re-render complete chart state for the current selection.
+        self.plot_widget.clear()
+        self.plot_widget.setTitle(title, size="16pt")
 
-    def create_demo_plot(self):
-        """Erstellt man einen einfachen Plot zu ausgeben."""
-        import numpy as np
-        x = np.linspace(0, 10, 100)
-        y = np.sin(x)
-        self.plot_widget.plot(x, y, pen='b')
-
-    def on_export_clicked(self):
-	# Smart Dateinamen
-	default_name = f"plot_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
-	default_path = os.path.join(os.path.expanduser("~"), default_name)
-
-        """Es ruft auf, wenn export button gedruckt hat"""
-        # Offene Dialog Box
-        file_path, _ = QFileDialog.getSaveFileName(
-            self,
-            "Save Plot as PNG",
-            os.path.expanduser("~"),
-            "PNG Images (*.png)"
-        )
-        if not file_path:
-            return
-        # versichere .png extension
-        if not file_path.lower().endswith('.png'):
-            file_path += '.png'
-
-	transparent = self.transparent_cb.isChecked()
-
-	#Zeigt es sich Warte Cursor wahrend des Exports
-	QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
-	try:
-	    success = self.controller.export_plot(self.plot_widget, file_path, transparent=transparent)
-	finally:
-	    QApplication.restoreOverrideCursor()
-
-
-        # Verwalte der Kontroller
-        success = self.controller.export_plot(self.plot_widget, file_path)
-        if success:
-            QMessageBox.information(self, "Success", f"Plot saved to:\n{file_path}")
+        if unit_x:
+            self.plot_widget.setLabel("bottom", f"{label_x} in {unit_x}")
         else:
-            QMessageBox.critical(self, "Error", "Failed to export plot.")
+            self.plot_widget.setLabel("bottom", label_x)
+
+        if unit_y:
+            self.plot_widget.setLabel("left", f"{label_y} in {unit_y}")
+        else:
+            self.plot_widget.setLabel("left", label_y)
+
+        if not series_list:
+            return
+
+        self.plot_widget.addLegend()
+        for series in series_list:
+            color = series.get("color", "#1f77b4")
+            width = int(series.get("line_width", 2))
+            pen = pg.mkPen(color=color, width=width)
+            self.plot_widget.plot(
+                series.get("x", []),
+                series.get("y", []),
+                pen=pen,
+                name=series.get("name", "Messreihe"),
+            )

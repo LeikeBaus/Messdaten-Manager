@@ -5,29 +5,35 @@ Zielsetzung:
 Ziel des Projektes ist die Entwicklung einer modularen GUI-Anwendung unter Verwendung von PyQt, die typische Aufgaben im Umgang mit technischen Messdaten abbildet.
 
 ## Funktionsumfang:
-- Auswahl von physikalischen Größen
-- Versuch mit Messdaten erfassen
-- Speichern von Messdaten in Dateien
-- Import von Messdaten (z.b. csv oder json)
-- Übersicht/Auswahl von Versuchen (File-Manager)
-- Plotten von 2D-Daten mit PyQt-Graph
-- Speichern von Plots (optional)
+- Anlegen, Laden, Speichern und Loeschen von Experimenten
+- Import von Experimenten oder Messreihen aus CSV und JSON
+- Verwaltung von Messreihen innerhalb eines Experiments (anlegen, loeschen, speichern)
+- Anzeige von Metadaten (Titel, Autor, Datum, Beschreibung, Kommentar)
+- Tabellenansicht der Messdaten zur aktuell ausgewaehlten Messreihe
+- Plotten von 2D-Daten mit pyqtgraph
+- Beim Auswaehlen eines Experiments werden alle vorhandenen Messreihen geplottet
+- Beim Auswaehlen einer Messreihe wird nur diese Messreihe dargestellt
+- Plot-Export ist als Menuepunkt vorhanden, aber aktuell nicht in den Workflow integriert
 
 ## Systemarchitektur
 MVC-Architektur
 ### Model
-- Verwalten von Messdaten
-- Import und Export von Dateien
-- Dateisystemzugriff
+- Datenklassen fuer Experiment, Messreihe und Messdaten
+- Repository fuer In-Memory-Verwaltung von Experimenten
+- Konvertierung von Rohwerten in numerische XY-Reihen fuer den Plot
 
 ### View
-- PyQt Benutzeroberfläche
-- Anzeige von Versuchen
-- Anzeige von Graphen
+- PyQt6-Oberflaeche mit Main Window, Menue, Toolbar und Seitenleiste
+- Baumansicht fuer Experimente und Messreihen
+- Tabellenansicht fuer Messdaten und Meta-Ansicht fuer Experimentinformationen
+- Plot-Ansicht mit Legende, Achsenbeschriftung und mehreren Datenreihen
+- Qt-Modelle fuer Baum- und Tabellenbindung
 
 ### Controller
-- Verbindung zwischen GUI und Datenmodell
-- Verarbeitung von Benutzeraktionen
+- Orchestrierung der Benutzeraktionen ueber den zentralen ExperimentController
+- Auswahlkontext, View-Update und Persistenz als getrennte Controller-Komponenten
+- Import/Persistenz ueber austauschbare Importer (CSV/JSON)
+- Laden von Workspace-Experimenten aus data/experiments beim Start
 
 ## User stories:
 - Als Benutzer möchte ich Versuche direkt erfassen können.
@@ -64,40 +70,49 @@ MVC-Architektur
 ## Ordnerstruktur
 - messdaten-manager/
 - │
-- ├── model/
-- │   ├── experiment.py # Experiment-Klasse
-- │   ├── measurement_data.py # Messdaten-Klasse
-- │   └── experiment_repository.py # Verwaltet Experimente, suchen, laden, speichern, etc.
-- │
-- ├── view/
-- │   ├── main_window.py
-- │   ├── experiment_list_view.py
-- │   ├── plot_view.py
-- │   └── dialogs/
-- │       ├── import_dialog.py
-- │       └── export_dialog.py
-- │
 - ├── controller/
 - │   ├── experiment_controller.py
-- │   ├── import_controller.py
-- │   ├── export_controller.py
-- │   └── plot_controller.py
+- │   ├── experiment_persistence.py
+- │   ├── experiment_view_updater.py
+- │   └── selection_context.py
+- │
+- ├── model/
+- │   ├── experiment.py
+- │   ├── experiment_repository.py
+- │   └── measurement_data.py
+- │
+- ├── view/
+- │   ├── app_actions.py
+- │   ├── data_view.py
+- │   ├── experiment_list_view.py
+- │   ├── import_dialog.py
+- │   ├── main_window.py
+- │   ├── meta_view.py
+- │   ├── plot_view.py
+- │   ├── partials/
+- │   │   ├── menubar.py
+- │   │   └── toolbar.py
+- │   └── qt_models/
+- │       ├── experiment_tree_model.py
+- │       └── measurement_table_model.py
 - │
 - ├── services/
-- │   ├── importers/
-- │   │   ├── importer.py # Abstraktes Interface für csv, json,... importer
-- │   │   ├── csv_importer.py
-- │   │   └── json_importer.py
-- │   │
-- │   └── exporters/
-- │       ├── exporter.py # Abstraktes Interface für csv, json,... exporter
-- │       ├── csv_exporter.py
-- │       └── json_exporter.py
-- │       └── plot_exporter.py
+- │   ├── exporters/
+- │   │   ├── exporter.py
+- │   │   ├── csv_exporter.py
+- │   │   ├── json_exporter.py
+- │   │   └── plot_exporter.py
+- │   └── importers/
+- │       ├── importer.py
+- │       ├── csv_importer.py
+- │       └── json_importer.py
 - │
 - ├── data/
-- │   └── experiments/ # Speicherort für Versuche
+- │   └── experiments/ (Speicherort fuer Versuche)
 - │
-- ├── config.json # Alle settings
-- ├── main.py # Einstiegspunkt. Initialisiert GUI und Controller. Soll möglichst wenig Geschäftslogik enthalten.
+- ├── exports/
+- │
+- ├── config.json
+- ├── main.py
+- ├── requirements.txt
 - └── README.md
