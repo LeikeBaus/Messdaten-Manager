@@ -1,0 +1,27 @@
+{
+  "app": {
+    "name": "Messdaten-Manager",
+    "version": "1.0.0"
+  },
+
+  "paths": {
+    "data_dir": "data/experiments",
+    "default_export_dir": "data/exports"
+  },
+
+  "import": {
+    "supported_formats": ["csv", "json"]
+  },
+
+  "plot": {
+    "default_width": 2,
+    "show_grid": true,
+    "legend": true
+  },
+
+  "ui": {
+    "window_width": 1200,
+    "window_height": 800,
+    "theme": "light"
+  }
+}
