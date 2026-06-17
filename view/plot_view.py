@@ -1,4 +1,7 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout
+from services.exporters.plot_exporter import PlotExporter
+import tempfile
+import os
 import pyqtgraph as pg
 
 
@@ -46,3 +49,25 @@ class PlotView(QWidget):
                 pen=pen,
                 name=series.get("name", "Messreihe"),
             )
+     def copy_to_clipboard(self):
+        """Plot as PNG to clipboard."""
+        exporter = PlotExporter()
+        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
+            temp_path = tmp.name
+
+        try:
+            transparent = self.transparent_cb.isChecked()
+            exporter.export_file(
+                {"plot_widget": self.plot_widget},
+                temp_path,
+                scale=2,          # moderate resolution for clipboard
+                transparent=transparent
+            )
+            pixmap = QPixmap(temp_path)
+            QGuiApplication.clipboard().setPixmap(pixmap)
+            QMessageBox.information(self, "Copied", "Plot copied to clipboard as image.")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to copy: {e}")
+        finally:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
