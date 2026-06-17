@@ -1,8 +1,10 @@
 from PyQt6.QtWidgets import QDialog, QVBoxLayout, QPushButton, QLabel, QFileDialog, QDialogButtonBox, QLineEdit
 
 class ImportDialog(QDialog):
+    """Collect a file path for experiment or measurement import."""
 
     def __init__(self, parent=None):
+        # Build a small dialog with picker and confirmation buttons.
         super().__init__(parent)
 
         self.setWindowTitle("Import Messdaten")
@@ -31,6 +33,7 @@ class ImportDialog(QDialog):
         self.setLayout(layout)
 
     def open_file(self):
+        # Restrict selection to supported import formats.
         file_path, _ = QFileDialog.getOpenFileName(
             self,
             "Datei auswählen",
@@ -41,4 +44,5 @@ class ImportDialog(QDialog):
         self.select_file.setText(file_path)
 
     def selected_file_path(self):
+        # Return the normalized path currently shown in the field.
         return self.select_file.text().strip()

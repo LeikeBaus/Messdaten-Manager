@@ -2,7 +2,10 @@ from PyQt6.QtWidgets import QWidget, QLabel, QLineEdit, QTextEdit, QGridLayout
 
 
 class MetaView(QWidget):
+    """Display selected experiment metadata fields."""
+
     def __init__(self, parent=None):
+        # Create metadata labels and input widgets.
         super().__init__(parent)
 
         self.setMaximumHeight(150)
@@ -41,6 +44,7 @@ class MetaView(QWidget):
         self.setLayout(grid)
 
     def set_meta(self, title="", author="", date="", description="", comment=""):
+        # Controller pushes selected experiment metadata into the form.
         self.title.setText(title)
         self.author.setText(author)
         self.date.setText(date)

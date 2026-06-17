@@ -4,14 +4,17 @@ from PyQt6.QtWidgets import QMainWindow, QStatusBar, QVBoxLayout, QWidget, QHBox
 from view.partials.toolbar import ToolBar
 from view.partials.menubar import MenuBar
 from view.app_actions import AppActions
-from view.experiment_list_view import ExperimentListView
+from view.experiment_tree_view import ExperimentTreeView
 from view.data_view import DataView
 from view.meta_view import MetaView
 from view.plot_view import PlotView
 
 
 class MainWindow(QMainWindow):
+    """Assemble the primary application window and child views."""
+
     def __init__(self, config):
+        # Build main frame, actions, and all visible subviews.
         super().__init__()
 
         # App Config
@@ -34,10 +37,10 @@ class MainWindow(QMainWindow):
         self.addToolBar(toolbar)
 
         # Sidebar
-        self.experiment_list_view = ExperimentListView(self)
+        self.experiment_tree_view = ExperimentTreeView(self)
         self.addDockWidget(
             Qt.DockWidgetArea.LeftDockWidgetArea,
-            self.experiment_list_view
+            self.experiment_tree_view
         )
 
         # Statusbar
@@ -56,6 +59,7 @@ class MainWindow(QMainWindow):
         # Plot
         self.plot_view = PlotView()
 
+        # Layout stacks metadata above a data table and live plot.
         data_layout = QHBoxLayout()
         data_layout.addWidget(self.data_view)
         data_layout.addWidget(self.plot_view)
@@ -66,13 +70,16 @@ class MainWindow(QMainWindow):
 
         container.setLayout(main_layout)
 
-    def set_experiment_list_model(self, model):
-        self.experiment_list_view.set_model(model)
+    def set_experiment_tree_model(self, model):
+        # Forward tree model binding to the sidebar view.
+        self.experiment_tree_view.set_model(model)
 
     def set_measurement_model(self, model):
+        # Forward measurement model binding to the data view.
         self.data_view.set_model(model)
 
     def set_meta(self, metadata):
+        # Push experiment metadata fields to the metadata widget.
         self.meta_view.set_meta(
             title=metadata.get("title", ""),
             author=metadata.get("author", ""),
@@ -82,6 +89,7 @@ class MainWindow(QMainWindow):
         )
 
     def set_plots(self, series_list, title="", label_x="", label_y="", unit_x="", unit_y=""):
+        # Push plot-ready series and labels to the plot widget.
         self.plot_view.set_plots(
             series_list,
             title=title,

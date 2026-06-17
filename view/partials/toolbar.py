@@ -3,7 +3,10 @@ from PyQt6.QtWidgets import QToolBar, QStyle
 
 
 class ToolBar(QToolBar):
+    """Build the icon toolbar from shared application actions."""
+
     def __init__(self, actions, parent=None):
+        # Configure icon toolbar and action grouping.
         super().__init__(parent)
         self.app_actions = actions
 
@@ -22,6 +25,7 @@ class ToolBar(QToolBar):
             (self.app_actions.plot_export, QStyle.StandardPixmap.SP_DialogSaveButton),
         ]
 
+        # Reuse the same actions as the menu, but with icons and grouping.
         for action, icon in icon_specs:
             action.setIcon(self.style().standardIcon(icon))
 

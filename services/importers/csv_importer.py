@@ -5,14 +5,16 @@ from services.importers.importer import Importer
 
 
 class CSVImporter(Importer):
+	"""Import measurement data from CSV files."""
 
-	SUPPORTED_EXTENSIONS = ("csv",)
+	SUPPORTED_EXTENSIONS = ("csv")
 
 	def import_file(self, file_path):
 		path = Path(file_path)
 
 		with path.open("r", encoding="utf-8", newline="") as file_handle:
 			reader = csv.reader(file_handle, skipinitialspace=True)
+			# Ignore fully empty lines to keep table data compact.
 			rows = [row for row in reader if any(cell.strip() for cell in row)]
 
 		if not rows:

@@ -3,9 +3,13 @@ from PyQt6.QtGui import QAction
 
 
 class AppActions(QObject):
+    """Bundle QAction objects shared by menu and toolbar."""
+
     def __init__(self, parent=None):
+        # Create all user-triggerable actions in one place.
         super().__init__(parent)
 
+        # Central action registry shared by menu and toolbar.
         self.experiment_new = QAction("Neues Experiment", self)
         self.experiment_load = QAction("Experiment laden", self)
         self.experiment_save = QAction("Experiment speichern", self)

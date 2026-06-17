@@ -2,7 +2,10 @@ from PyQt6.QtWidgets import QMenuBar
 
 
 class MenuBar(QMenuBar):
+    """Build the top menu bar from shared application actions."""
+
     def __init__(self, actions, parent=None):
+        # Create static menu groups and attach provided actions.
         super().__init__(parent)
         self.app_actions = actions
 
@@ -22,6 +25,7 @@ class MenuBar(QMenuBar):
             ("&Plots", [self.app_actions.plot_export]),
         ]
 
+        # Build menu structure from declarative action groups.
         for title, action_list in menu_specs:
             menu = self.addMenu(title)
             for action in action_list:

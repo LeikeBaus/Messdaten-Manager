@@ -3,7 +3,10 @@ import pyqtgraph as pg
 
 
 class PlotView(QWidget):
+    """Render one or more measurement series with pyqtgraph."""
+
     def __init__(self, parent=None):
+        # Initialize the embedded pyqtgraph widget and layout.
         super().__init__(parent)
 
         self.plot_widget = pg.PlotWidget()
@@ -15,6 +18,7 @@ class PlotView(QWidget):
         self.pen = pg.mkPen(color=(0, 0, 255), width=3)
 
     def set_plots(self, series_list, title="", label_x="", unit_x="", label_y="", unit_y=""):
+        # Re-render complete chart state for the current selection.
         self.plot_widget.clear()
         self.plot_widget.setTitle(title, size="16pt")
 

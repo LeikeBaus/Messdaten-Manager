@@ -2,6 +2,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QStandardItem, QStandardItemModel
 
 
+# Custom roles carry domain ids through Qt selection APIs.
 NODE_TYPE_ROLE = int(Qt.ItemDataRole.UserRole) + 1
 EXPERIMENT_ID_ROLE = int(Qt.ItemDataRole.UserRole) + 2
 MEASUREMENT_ID_ROLE = int(Qt.ItemDataRole.UserRole) + 3
@@ -11,13 +12,17 @@ NODE_TYPE_MEASUREMENT = "measurement"
 
 
 class ExperimentTreeModel(QStandardItemModel):
+    """Expose experiments and measurements as a hierarchical Qt model."""
+
     def __init__(self, experiments=None):
+        # Initialize headers and optional startup dataset.
         super().__init__()
         self.setHorizontalHeaderLabels(["Experimente und Messreihen"])
         self._experiments = []
         self.set_experiments(experiments or [])
 
     def set_experiments(self, experiments):
+        # Rebuild the tree whenever the repository snapshot changes.
         self._experiments = list(experiments)
         self.clear()
         self.setHorizontalHeaderLabels(["Experimente und Messreihen"])
@@ -40,6 +45,7 @@ class ExperimentTreeModel(QStandardItemModel):
             self.appendRow(experiment_item)
 
     def item_info(self, index):
+        # Decode custom Qt roles into normalized selection metadata.
         if not index.isValid():
             return None
 
