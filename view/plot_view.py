@@ -1,5 +1,7 @@
-from PyQt6.QtWidgets import QWidget, QVBoxLayout
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QApplication
+from PyQt6.QtCore import Qt
 import pyqtgraph as pg
+from pyqtgraph.exporters import ImageExporter
 
 
 class PlotView(QWidget):
@@ -46,3 +48,28 @@ class PlotView(QWidget):
                 pen=pen,
                 name=series.get("name", "Messreihe"),
             )
+
+    def export_file(self, plot_widget_dict, file_path, scale=3, transparent=False):
+        """
+        the plot with optional high resolution and transparent background.
+        """
+        plot_widget = plot_widget_dict.get("plot_widget")
+        if plot_widget is None:
+            raise ValueError("No plot widget provided")
+
+        try:
+            exporter = ImageExporter(plot_widget.plotItem)
+
+            # original size
+            orig_size = plot_widget.size()
+            # Apply scale factor
+            exporter.parameters()['width'] = orig_size.width() * scale
+            exporter.parameters()['height'] = orig_size.height() * scale
+
+            # Transparent background
+            if transparent:
+                exporter.parameters()['background'] = (0, 0, 0, 0)  # fully transparent
+
+            exporter.export(file_path)
+        except Exception as e:
+            raise RuntimeError(f"Export failed: {e}") from e
