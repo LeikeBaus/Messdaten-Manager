@@ -77,24 +77,22 @@ MVC-Architektur
 - │   └── selection_context.py
 - │
 - ├── model/
-- │   ├── experiment.py
+- │   ├── experiment_data_classes.py
 - │   ├── experiment_repository.py
-- │   └── measurement_data.py
+- │   ├── experiment_tree_model.py
+- │   └── measurement_table_model.py
 - │
 - ├── view/
 - │   ├── app_actions.py
 - │   ├── data_view.py
-- │   ├── experiment_list_view.py
+- │   ├── experiment_tree_view.py
 - │   ├── import_dialog.py
 - │   ├── main_window.py
 - │   ├── meta_view.py
 - │   ├── plot_view.py
-- │   ├── partials/
-- │   │   ├── menubar.py
-- │   │   └── toolbar.py
-- │   └── qt_models/
-- │       ├── experiment_tree_model.py
-- │       └── measurement_table_model.py
+- │   └── partials/
+- │       ├── menubar.py
+- │       └── toolbar.py
 - │
 - ├── services/
 - │   ├── exporters/
