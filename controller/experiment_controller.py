@@ -4,310 +4,325 @@ from datetime import datetime
 from PyQt6.QtWidgets import QDialog, QMessageBox, QFileDialog
 
 from model.experiment_data_classes import Experiment, MeasurementSeries, MeasurementData
-from controller.experiment_persistence import ExperimentPersistence
-from controller.selection_context import SelectionContext
-from controller.experiment_view_updater import ExperimentViewUpdater
+from model.experiment_tree_model import ExperimentTreeModel
+from model.measurement_table_model import MeasurementTableModel
 from services.importers.csv_importer import CSVImporter
 from services.importers.json_importer import JSONImporter
 from services.exporters.csv_exporter import CSVExporter
 from services.exporters.json_exporter import JSONExporter
 from services.exporters.plot_exporter import PlotExporter
 from view.import_dialog import ImportDialog
-from model.experiment_tree_model import ExperimentTreeModel, NODE_TYPE_EXPERIMENT, NODE_TYPE_MEASUREMENT
-from model.measurement_table_model import MeasurementTableModel
 
 
 class ExperimentController:
-	"""Coordinate user actions between UI, repository, and persistence."""
 
 	def __init__(self, main_window, repository):
-		# Initialize controller dependencies and connect startup flow.
 		self.main_window = main_window
 		self.repository = repository
-		# Import/export strategies are selected by file extension.
 		self.importers = [CSVImporter(), JSONImporter()]
 		self.exporters = [CSVExporter(), JSONExporter()]
-
-		self.experiment_tree_model = ExperimentTreeModel()
-		self.measurement_table_model = MeasurementTableModel()
-		self.persistence = ExperimentPersistence(self.importers, self.exporters)
+		self.tree_model = ExperimentTreeModel()
+		self.table_model = MeasurementTableModel()
 		self.plot_exporter = PlotExporter()
 
-		self.main_window.set_experiment_tree_model(self.experiment_tree_model)
-		self.main_window.set_measurement_model(self.measurement_table_model)
-		self.selection_context = SelectionContext(self.main_window.experiment_tree_view, self.experiment_tree_model)
-		self.view_updater = ExperimentViewUpdater(self.main_window, self.measurement_table_model)
+		# Set models
+		main_window.set_experiment_tree_model(self.tree_model)
+		main_window.set_measurement_model(self.table_model)
 
-		self._wire_actions()
+		# Connect actions and selection changes.
+		acts = main_window.actions
+		acts.experiment_new.triggered.connect(self.create_experiment)
+		acts.experiment_load.triggered.connect(self.load_experiment)
+		acts.experiment_save.triggered.connect(self.save_experiment)
+		acts.experiment_delete.triggered.connect(self.delete_experiments)
+		acts.measurement_new.triggered.connect(self.create_measurement)
+		acts.measurement_import.triggered.connect(self.import_measurement)
+		acts.measurement_save.triggered.connect(self.save_measurement)
+		acts.measurement_delete.triggered.connect(self.delete_measurements)
+		acts.plot_export.triggered.connect(self.export_plot)
+		main_window.experiment_tree_view.tree_view.selectionModel().selectionChanged.connect(self._on_selection)
 
-		self._load_workspace_experiments()
-		self.refresh_views()
-		self._apply_selection_to_views()
+		# Load existing experiments from the workspace.
+		for exp in self._load_workspace():
+			self.repository.upsert(exp)
+		self._refresh()
 
-	def _wire_actions(self):
-		# Central action wiring keeps UI elements free of business logic.
-		actions = self.main_window.actions
-		actions.experiment_new.triggered.connect(self.create_experiment)
-		actions.experiment_load.triggered.connect(self.load_experiment)
-		actions.experiment_save.triggered.connect(self.save_experiment)
-		actions.experiment_delete.triggered.connect(self.delete_experiments)
-
-		actions.measurement_new.triggered.connect(self.create_measurement)
-		actions.measurement_import.triggered.connect(self.import_measurement)
-		actions.measurement_save.triggered.connect(self.save_measurement)
-		actions.measurement_delete.triggered.connect(self.delete_measurements)
-
-		actions.plot_export.triggered.connect(self.export_plot)
-
-		selection_model = self.main_window.experiment_tree_view.tree_view.selectionModel()
-		if selection_model is not None:
-			selection_model.selectionChanged.connect(self._on_selection_changed)
-
-	def _on_selection_changed(self, _selected, _deselected):
-		# Refresh visible data whenever tree selection changes.
-		self._apply_selection_to_views()
+	# --- Actions ---
 
 	def create_experiment(self):
-		# Create a new empty experiment with default metadata.
-		index = len(self.repository.list_experiments()) + 1
-		experiment_id = f"experiment_{index}"
-		timestamp = datetime.now().strftime("%Y-%m-%d")
-		experiment = Experiment(
-			id=experiment_id,
-			metadata={
-				"title": f"Neues Experiment {index}",
-				"author": "",
-				"date": timestamp,
-				"description": "",
-				"comment": "",
-			},
+		idx = len(self.repository.list_experiments()) + 1
+		self._upsert(Experiment(
+			id=f"experiment_{idx}",
+			metadata={"title": f"Neues Experiment {idx}", "author": "", "date": datetime.now().strftime("%Y-%m-%d"), "description": "", "comment": ""},
 			measurements=[],
-		)
-		self._upsert_and_refresh(experiment)
+		))
 
 	def load_experiment(self):
-		# Import an experiment from a selected file path.
-		file_path = self._pick_import_file_path()
-		if not file_path:
+		path = self._pick_file()
+		if not path:
 			return
-
-		experiment = self.persistence.import_experiment_from_path(file_path)
-		if experiment is None:
-			self._show_error("Experiment laden", "Die ausgewaehlte Datei konnte nicht als Experiment geladen werden.")
+		exp = self._import_experiment(path)
+		if exp is None:
+			QMessageBox.warning(self.main_window, "Experiment laden", "Datei konnte nicht geladen werden.")
 			return
-
-		self.repository.upsert(experiment)
-		self.repository.set_current(experiment.id)
-		self._refresh_selection_views()
+		self.repository.upsert(exp)
+		self.repository.set_current(exp.id)
+		self._refresh()
 
 	def save_experiment(self):
-		# Persist the selected experiment and all contained measurements.
-		experiment = self._require_selected_experiment("Experiment speichern")
-		if experiment is None:
-			return
-
-		self.persistence.persist_experiment(experiment)
-		self._show_info("Experiment speichern", f"Experiment '{experiment.id}' wurde gespeichert.")
+		exp = self._require_experiment("Experiment speichern")
+		if exp:
+			self._persist_experiment(exp)
+			QMessageBox.information(self.main_window, "Experiment speichern", f"'{exp.id}' gespeichert.")
 
 	def delete_experiments(self):
-		# Delete the currently selected experiment from the repository.
-		experiment = self._require_selected_experiment("Experiment loeschen")
-		if experiment is None:
-			return
-
-		self.repository.remove_experiments([experiment.id])
-		self._refresh_selection_views()
+		exp = self._require_experiment("Experiment loeschen")
+		if exp:
+			self.repository.remove_experiments([exp.id])
+			self._refresh()
 
 	def create_measurement(self):
-		# Append a new empty measurement to the selected experiment.
-		experiment = self._require_selected_experiment("Neue Messreihe")
-		if experiment is None:
-			return
-
-		experiment.measurements.append(self._new_measurement(experiment))
-		self._upsert_and_refresh(experiment)
+		exp = self._require_experiment("Neue Messreihe")
+		if exp:
+			exp.measurements.append(self._new_measurement(exp))
+			self._upsert(exp)
 
 	def import_measurement(self):
-		# Import a measurement file and attach it to the selected experiment.
-		experiment = self._require_selected_experiment("Messreihe importieren")
-		if experiment is None:
+		exp = self._require_experiment("Messreihe importieren")
+		if exp is None:
 			return
-
-		file_path = self._pick_import_file_path()
-		if not file_path:
+		path = self._pick_file()
+		if not path:
 			return
-
-		payload = self.persistence.import_file(file_path)
+		payload = self._import_file(path)
 		if not isinstance(payload, dict):
-			self._show_error("Messreihe importieren", "Datei konnte nicht importiert werden.")
+			QMessageBox.warning(self.main_window, "Messreihe importieren", "Datei konnte nicht importiert werden.")
 			return
-
-		experiment.measurements.append(
-			self._new_measurement(
-				experiment,
-				name=Path(file_path).stem,
-				headers=payload.get("headers") or [],
-				rows=payload.get("rows") or [],
-			)
-		)
-		self._upsert_and_refresh(experiment)
+		exp.measurements.append(self._new_measurement(exp, name=Path(path).stem, headers=payload.get("headers") or [], rows=payload.get("rows") or []))
+		self._upsert(exp)
 
 	def save_measurement(self):
-		# Persist only the selected measurement and update metadata file.
-		selection = self._require_selected_measurement("Messreihe speichern")
-		if selection is None:
-			return
-
-		experiment, measurement = selection
-
-		experiment_dir = self.persistence.experiment_dir(experiment.id)
-		experiment_dir.mkdir(parents=True, exist_ok=True)
-		self.persistence.write_measurement_csv(experiment_dir, measurement)
-		self.persistence.write_experiment_metadata(experiment)
-
-		self._show_info("Messreihe speichern", "1 Messreihe gespeichert.")
+		sel = self._require_measurement("Messreihe speichern")
+		if sel:
+			exp, meas = sel
+			d = self._exp_dir(exp.id)
+			d.mkdir(parents=True, exist_ok=True)
+			self._write_csv(d, meas)
+			self._write_metadata(exp)
+			QMessageBox.information(self.main_window, "Messreihe speichern", "Messreihe gespeichert.")
 
 	def delete_measurements(self):
-		# Remove the selected measurement from its parent experiment.
-		selection = self._require_selected_measurement("Messreihe loeschen")
-		if selection is None:
-			return
-
-		experiment, measurement = selection
-
-		experiment.measurements = [
-			entry for entry in experiment.measurements
-			if entry.id != measurement.id
-		]
-		self._upsert_and_refresh(experiment)
+		sel = self._require_measurement("Messreihe loeschen")
+		if sel:
+			exp, meas = sel
+			exp.measurements = [m for m in exp.measurements if m.id != meas.id]
+			self._upsert(exp)
 
 	def export_plot(self):
-		# Export the currently visible plot into an image file.
-		file_path, _ = QFileDialog.getSaveFileName(
-			self.main_window,
-			"Plot exportieren",
-			"",
-			"PNG (*.png);;JPEG (*.jpg *.jpeg)"
-		)
-		if not file_path:
+		path, _ = QFileDialog.getSaveFileName(self.main_window, "Plot exportieren", "", "PNG (*.png);;JPEG (*.jpg *.jpeg)")
+		if not path:
 			return
-
 		try:
-			self.plot_exporter.export_file(
-				{"plot_widget": self.main_window.plot_view.plot_widget},
-				file_path,
-			)
+			self.plot_exporter.export_file({"plot_widget": self.main_window.plot_view.plot_widget}, path)
 		except Exception as exc:
-			self._show_error("Plot exportieren", f"Plot konnte nicht exportiert werden: {exc}")
+			QMessageBox.warning(self.main_window, "Plot exportieren", f"Fehler: {exc}")
 			return
+		QMessageBox.information(self.main_window, "Plot exportieren", "Plot exportiert.")
 
-		self._show_info("Plot exportieren", "Plot erfolgreich exportiert.")
+	# --- View ---
 
-	def refresh_views(self):
-		# Rebuild the tree view from the repository snapshot.
-		experiments = self.repository.list_experiments()
-		self.experiment_tree_model.set_experiments(experiments)
+	def _refresh(self):
+		self.tree_model.set_experiments(self.repository.list_experiments())
 		self.main_window.experiment_tree_view.tree_view.expandAll()
+		self._on_selection()
 
-	def _apply_selection_to_views(self):
-		# Translate current tree selection to concrete view updates.
-		selected = self.selection_context.selected_node_info()
-
-		if selected is None:
-			self.view_updater.clear()
+	def _on_selection(self):
+		info = self._selected_info()
+		if info is None:
+			self._clear_views()
 			return
+		exp = self.repository.get(info["experiment_id"])
+		if info["type"] == "experiment":
+			self._show_experiment(exp)
+		elif info["type"] == "measurement":
+			meas = next((m for m in exp.measurements if m.id == info["measurement_id"]), None) if exp else None
+			self._show_measurement(exp, meas)
+		else:
+			self._clear_views()
 
-		experiment = self.repository.get(selected["experiment_id"])
+	def _clear_views(self):
+		self.table_model.set_measurements([], [])
+		self.main_window.set_meta({})
+		self.main_window.set_plots([], title="", label_x="", label_y="")
 
-		if selected["type"] == NODE_TYPE_EXPERIMENT:
-			self.view_updater.show_experiment(experiment)
+	def _show_experiment(self, exp):
+		if exp is None:
+			self._clear_views()
 			return
+		first = exp.measurements[0] if exp.measurements else None
+		self.table_model.set_measurements(first.data.headers if first else [], first.data.rows if first else [])
+		self.main_window.set_meta(exp.metadata)
+		series = []
+		for m in exp.measurements:
+			x, y = m.data.numeric_xy_series()
+			if x and y:
+				series.append(self._to_series(m, x, y))
+		self.main_window.set_plots(
+			series,
+			title=exp.metadata.get("title", exp.id),
+			label_x=first.x.get("title", "X") if first else "X",
+			label_y=first.y.get("title", "Y") if first else "Y",
+			unit_x=first.x.get("unit", "") if first else "",
+			unit_y=first.y.get("unit", "") if first else "",
+		)
 
-		if selected["type"] == NODE_TYPE_MEASUREMENT:
-			measurement = self._find_measurement(experiment, selected["measurement_id"]) if experiment is not None else None
-			self.view_updater.show_measurement(experiment, measurement)
+	def _show_measurement(self, exp, meas):
+		if exp is None or meas is None:
+			self._clear_views()
 			return
+		self.table_model.set_measurements(meas.data.headers, meas.data.rows)
+		self.main_window.set_meta(exp.metadata)
+		self.main_window.set_plots(
+			[self._to_series(meas)],
+			title=exp.metadata.get("title", exp.id),
+			label_x=meas.x.get("title", "X"), label_y=meas.y.get("title", "Y"),
+			unit_x=meas.x.get("unit", ""), unit_y=meas.y.get("unit", ""),
+		)
 
-		self.view_updater.clear()
+	def _to_series(self, measurement, x=None, y=None):
+		if x is None or y is None:
+			x, y = measurement.data.numeric_xy_series()
+		return {"name": measurement.name, "x": x, "y": y, "color": measurement.plot.get("color", "#1f77b4"), "line_width": measurement.plot.get("line_width", 2)}
 
-	def _require_selected_experiment(self, action_name):
-		# Return selected experiment or show a user-facing error.
-		experiment_id = self.selection_context.selected_experiment_id()
-		if experiment_id is None:
-			self._show_error(action_name, "Bitte waehlen Sie ein Experiment aus.")
+	# --- Selection helpers ---
+
+	def _selected_info(self):
+		index = self.main_window.experiment_tree_view.selected_index()
+		return self.tree_model.item_info(index) if index is not None else None
+
+	def _require_experiment(self, action):
+		info = self._selected_info()
+		if info is None or info["type"] != "experiment":
+			QMessageBox.warning(self.main_window, action, "Bitte waehlen Sie ein Experiment aus.")
 			return None
-
-		experiment = self.repository.get(experiment_id)
-		if experiment is None:
-			self._show_error(action_name, "Experiment konnte nicht gefunden werden.")
+		exp = self.repository.get(info["experiment_id"])
+		if exp is None:
+			QMessageBox.warning(self.main_window, action, "Experiment nicht gefunden.")
 			return None
+		return exp
 
-		return experiment
-
-	def _show_error(self, title, text):
-		# Show a warning dialog with an operation-specific message.
-		QMessageBox.warning(self.main_window, title, text)
-
-	def _show_info(self, title, text):
-		# Show an informational dialog after successful operations.
-		QMessageBox.information(self.main_window, title, text)
-
-	def _find_measurement(self, experiment, measurement_id):
-		# Locate a measurement by id in a given experiment.
-		return next((measurement for measurement in experiment.measurements if measurement.id == measurement_id), None)
-
-	def _pick_import_file_path(self):
-		# Open the import dialog and return the selected file path.
-		dialog = ImportDialog(self.main_window)
-		if dialog.exec() != QDialog.DialogCode.Accepted:
+	def _require_measurement(self, action):
+		info = self._selected_info()
+		if info is None or info["type"] != "measurement":
+			QMessageBox.warning(self.main_window, action, "Bitte waehlen Sie eine Messreihe aus.")
 			return None
-		return dialog.selected_file_path()
+		exp = self.repository.get(info["experiment_id"])
+		meas = next((m for m in exp.measurements if m.id == info["measurement_id"]), None) if exp else None
+		if exp is None or meas is None:
+			QMessageBox.warning(self.main_window, action, "Messreihe nicht gefunden.")
+			return None
+		return exp, meas
 
-	def _refresh_selection_views(self):
-		# Sync tree, metadata, table, and plot after data changes.
-		self.refresh_views()
-		self._apply_selection_to_views()
+	def _upsert(self, exp):
+		self.repository.upsert(exp)
+		self._refresh()
 
-	def _upsert_and_refresh(self, experiment):
-		# Upsert experiment in repository and refresh visible UI.
-		self.repository.upsert(experiment)
-		self._refresh_selection_views()
+	# --- Persistence ---
 
-	def _new_measurement(self, experiment, name=None, headers=None, rows=None):
-		# Build a measurement object with sensible default axis/plot settings.
-		headers = headers or ["x", "y"]
-		rows = rows or []
-		index = len(experiment.measurements) + 1
+	def _load_workspace(self):
+		root = Path("data") / "experiments"
+		experiments = []
+		for d in sorted(root.iterdir()):
+			if d.is_dir() and (d / "metadata.json").exists():
+				exp = self._import_experiment(str(d / "metadata.json"))
+				if exp:
+					experiments.append(exp)
+		return experiments
+
+	def _import_file(self, path):
+		for imp in self.importers:
+			if imp.can_import(path):
+				return imp.import_file(path)
+		return None
+
+	def _import_experiment(self, file_path):
+		path = Path(file_path)
+		if path.name == "metadata.json":
+			return self._load_from_metadata(path)
+		data = self._import_file(file_path)
+		if not isinstance(data, dict):
+			return None
+		exp_id = data.get("id") or path.stem
+		return Experiment(id=exp_id, metadata=data.get("metadata") or {"title": exp_id}, measurements=[self._payload_to_measurement(exp_id, data)])
+
+	def _load_from_metadata(self, meta_path):
+		doc = self._import_file(str(meta_path)) or {}
+		if not isinstance(doc, dict):
+			doc = {}
+		info = doc.get("experiment", {})
+		exp_id = info.get("id") or meta_path.parent.name
+		metadata = {"title": info.get("title", exp_id), **{k: info.get(k, "") for k in ("author", "date", "description", "comment")}}
+		measurements = []
+		for m_def in doc.get("measurements", []):
+			f = meta_path.parent / m_def.get("file", "")
+			if not f.exists():
+				continue
+			payload = self._import_file(str(f)) or {}
+			measurements.append(MeasurementSeries(
+				id=m_def.get("id") or f.stem,
+				name=m_def.get("name") or f.stem,
+				data=MeasurementData(headers=payload.get("headers") or [], rows=payload.get("rows") or []),
+				x=m_def.get("x") or {}, y=m_def.get("y") or {}, plot=m_def.get("plot") or {},
+			))
+		return Experiment(id=exp_id, metadata=metadata, measurements=measurements)
+
+	def _payload_to_measurement(self, exp_id, payload):
+		h = payload.get("headers") or []
 		return MeasurementSeries(
-			id=f"{experiment.id}_measurement_{index}",
-			name=name or f"Messreihe {index}",
-			data=MeasurementData(headers=headers, rows=rows),
-			x={"title": headers[0] if len(headers) > 0 else "X", "type": "float", "unit": ""},
-			y={"title": headers[1] if len(headers) > 1 else "Y", "type": "float", "unit": ""},
+			id=f"{exp_id}_measurement_1", name="Messung 1",
+			data=MeasurementData(headers=h, rows=payload.get("rows") or []),
+			x={"title": h[0] if h else "X", "type": "float", "unit": ""},
+			y={"title": h[1] if len(h) > 1 else "Y", "type": "float", "unit": ""},
 			plot={"visible": True, "color": "#1f77b4", "line_width": 2},
 		)
 
-	def _require_selected_measurement(self, action_name):
-		# Return selected experiment/measurement pair or show an error.
-		measurement_ref = self.selection_context.selected_measurement_ref()
-		if measurement_ref is None:
-			self._show_error(action_name, "Bitte waehlen Sie mindestens eine Messreihe aus.")
-			return None
+	def _exp_dir(self, exp_id):
+		return Path("data") / "experiments" / exp_id
 
-		experiment = self.repository.get(measurement_ref["experiment_id"])
-		if experiment is None:
-			self._show_error(action_name, "Experiment oder Messreihe konnte nicht gefunden werden.")
-			return None
+	def _meas_filename(self, meas):
+		return f"{meas.id.replace(' ', '_')}.csv"
 
-		measurement = self._find_measurement(experiment, measurement_ref["measurement_id"])
-		if measurement is None:
-			self._show_error(action_name, "Experiment oder Messreihe konnte nicht gefunden werden.")
-			return None
+	def _write_csv(self, exp_dir, meas):
+		self.exporters[0].export_file({"headers": list(meas.data.headers or []), "rows": list(meas.data.rows or [])}, Path(exp_dir) / self._meas_filename(meas))
 
-		return experiment, measurement
+	def _write_metadata(self, exp):
+		d = self._exp_dir(exp.id)
+		d.mkdir(parents=True, exist_ok=True)
+		meta = exp.metadata or {}
+		doc = {
+			"experiment": {"id": exp.id, "title": meta.get("title", exp.id), **{k: meta.get(k, "") for k in ("author", "date", "description", "comment")}},
+			"measurements": [{"id": m.id, "name": m.name, "file": self._meas_filename(m), "x": dict(m.x or {}), "y": dict(m.y or {}), "plot": dict(m.plot or {})} for m in exp.measurements],
+		}
+		self.exporters[0].export_file(doc, d / "metadata.json")
 
-	def _load_workspace_experiments(self):
-		# Load persisted workspace experiments during startup.
-		for experiment in self.persistence.load_workspace_experiments():
-			if experiment is not None:
-				self.repository.upsert(experiment)
+	def _persist_experiment(self, exp):
+		d = self._exp_dir(exp.id)
+		d.mkdir(parents=True, exist_ok=True)
+		for m in exp.measurements:
+			self._write_csv(d, m)
+		self._write_metadata(exp)
+
+	def _new_measurement(self, exp, name=None, headers=None, rows=None):
+		h = headers or ["x", "y"]
+		idx = len(exp.measurements) + 1
+		return MeasurementSeries(
+			id=f"{exp.id}_measurement_{idx}", name=name or f"Messreihe {idx}",
+			data=MeasurementData(headers=h, rows=rows or []),
+			x={"title": h[0], "type": "float", "unit": ""},
+			y={"title": h[1] if len(h) > 1 else "Y", "type": "float", "unit": ""},
+			plot={"visible": True, "color": "#1f77b4", "line_width": 2},
+		)
+
+	def _pick_file(self):
+		dialog = ImportDialog(self.main_window)
+		return dialog.selected_file_path() if dialog.exec() == QDialog.DialogCode.Accepted else None
