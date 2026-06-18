@@ -71,10 +71,7 @@ MVC-Architektur
 - messdaten-manager/
 - │
 - ├── controller/
-- │   ├── experiment_controller.py
-- │   ├── experiment_persistence.py
-- │   ├── experiment_view_updater.py
-- │   └── selection_context.py
+- │   └── experiment_controller.py
 - │
 - ├── model/
 - │   ├── experiment_data_classes.py
@@ -114,3 +111,12 @@ MVC-Architektur
 - ├── main.py
 - ├── requirements.txt
 - └── README.md
+
+
+## KI-Nutzung
+Folgende Dinge wurde mithilfe von Github Copilot / Gemini / ChatGPT GPT-5.5 vollzogen
+- Allgemein als Mentor und Programmierhilfe, ohne direkt Code-Generierung
+- Umwandlung der bisherigen Datenstrukturen in Dataclasses
+- Neustrukturierung des Tree-Models
+- Generalüberholung des Workspaces kurz vor Projektabgabe aufgrund von Zeitmangel
+- Debugging
