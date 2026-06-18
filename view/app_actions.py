@@ -21,3 +21,5 @@ class AppActions(QObject):
         self.measurement_delete = QAction("Messreihe loeschen", self)
 
         self.plot_export = QAction("Plot exportieren", self)
+        self.copy_plot_action = QAction("Copy Plot to Clipboard", self)
+        self.copy_plot_action.triggered.connect(self._on_copy_plot)

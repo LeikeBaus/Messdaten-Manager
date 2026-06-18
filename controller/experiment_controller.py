@@ -183,6 +183,7 @@ class ExperimentController:
 
 	def export_plot(self):
 		# Export the currently visible plot into an image file.
+		transparent = self.main_window.plot_view.transparent_cb.isChecked()
 		file_path, _ = QFileDialog.getSaveFileName(
 			self.main_window,
 			"Plot exportieren",
@@ -191,17 +192,23 @@ class ExperimentController:
 		)
 		if not file_path:
 			return
-
+		QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
 		try:
 			self.plot_exporter.export_file(
 				{"plot_widget": self.main_window.plot_view.plot_widget},
 				file_path,
+				scale=3,                # high resolution
+            	transparent=transparent
 			)
 		except Exception as exc:
-			self._show_error("Plot exportieren", f"Plot konnte nicht exportiert werden: {exc}")
-			return
+			QApplication.restoreOverrideCursor()
+        	self._show_error("Plot exportieren", f"Plot konnte nicht exportiert werden: {exc}")
+        	return
+    	finally:
+        	QApplication.restoreOverrideCursor()
 
-		self._show_info("Plot exportieren", "Plot erfolgreich exportiert.")
+	def copy_plot_to_clipboard(self):
+    	self.main_window.plot_view.copy_to_clipboard()
 
 	def refresh_views(self):
 		# Rebuild the tree view from the repository snapshot.
